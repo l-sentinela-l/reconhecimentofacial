@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lista de Chamada</title>
+  <link rel="stylesheet" href="css/chamada.css" />
+</head>
+<body>
+  <div class="chamada-container">
+    <h1>Lista de Chamada - Reconhecimento Facial</h1>
+
+    <div class="reconhecer">
+      <button onclick="AbrirCamera()">Marcar Presença (Reconhecimento Facial)</button>
+    </div>
+    <div class="camera">
+      <video id="video" width="400" autoplay></video>
+    </div>
+    
+
+    <table class="tabela-chamada">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Matrícula</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Kauan Francisco</td>
+          <td>12345678-9</td>
+          <td class="presente">Presente</td>
+        </tr>
+        <tr>
+          <td>Pedro Antonio</td>
+          <td>12345678-9</td>
+          <td class="ausente">Ausente</td>
+        </tr>
+        <tr>
+          <td>Maria Eduarda</td>
+          <td>12345678-9</td>
+          <td class="presente">Presente</td>
+        </tr>
+        <tr>
+          <td>João Luís</td>
+          <td>12345678-9</td>
+          <td class="ausente">Ausente</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <script src="js/chamada.js"></script>
+</body>
+</html>
