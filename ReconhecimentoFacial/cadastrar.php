@@ -1,6 +1,6 @@
 <?php
 // Configuração do banco de dados
-$serverName = "DESKTOP-JI9FDB3\SQLEXPRESS";
+$serverName = "DESKTOP-JI9FDB3\\SQLEXPRESS";
 $connectionOptions = array(
     "Database" => "Reconhecimento",
     "Uid" => "teste",
@@ -37,65 +37,63 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $classeMensagem = 'erro';
     } else {
         try {
-            // 1. Salvar imagem temporária
+            // Salvar imagem temporária
             $temp_file = tempnam(sys_get_temp_dir(), 'face_');
-            file_put_contents($temp_file, $facial_data);
+            $base64_data = str_replace('data:image/jpeg;base64,', '', $facial_data);
+            $base64_data = str_replace(' ', '+', $base64_data);
+            file_put_contents($temp_file, base64_decode($base64_data));
 
-            // 2. Chamar o Python para processar o rosto
+            // Executar script Python
             $python_script = __DIR__ . '\\processar_rosto.py';
-            
-            // Verificar se o arquivo Python existe
             if (!file_exists($python_script)) {
                 throw new Exception("Arquivo Python não encontrado");
             }
 
-            // Montar comando (ajuste o caminho do Python se necessário)
-            $command = '"C:\\Users\\Loren\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe" "' . $python_script . '" "' . $temp_file . '" 2>&1';
+            $command = '"C:\\Users\\Loren\\AppData\\Local\\Programs\\Python\\Python313\\python.exe" "' . $python_script . '" "' . $temp_file . '" 2>&1';
             $output = shell_exec($command);
 
             if ($output === null) {
-                throw new Exception("O serviço de reconhecimento facial não respondeu. Verifique:<br>
-                                 1. Se o Python está instalado em C:\Python39\<br>
-                                 2. Se as bibliotecas estão instaladas (opencv-python, face-recognition, numpy)");
+                throw new Exception("O Python não respondeu. Verifique o caminho e dependências.");
             }
 
             $resultado = json_decode($output, true);
-            
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new Exception("Erro ao ler resposta do Python: " . substr($output, 0, 200));
-            }
-
-            if (!$resultado || !isset($resultado['success'])) {
-                throw new Exception("Formato de resposta inválido do Python");
+            if (json_last_error() !== JSON_ERROR_NONE || !$resultado || !isset($resultado['success'])) {
+                throw new Exception("Erro no retorno do Python: " . substr($output, 0, 200));
             }
 
             if (!$resultado['success']) {
-                throw new Exception($resultado['message'] ?? "Erro no reconhecimento facial");
+                throw new Exception("Reconhecimento facial falhou: " . $resultado['message']);
             }
 
-            // 3. Salvar no banco de dados
-            $sql_usuario = "INSERT INTO Usuarios (Nome_Usuario, Nome_completo, CPF, Senha, DataCadastro, Ativo) 
-                          VALUES (?, ?, ?, ?, GETDATE(), 1)";
+            $vetor = $resultado['vetor_caracteristicas'];
+
+            // Inserir usuário e capturar ID
+            $sql_usuario = "INSERT INTO Usuarios (Nome_Usuario, Nome_completo, CPF, Senha, DataCadastro, Ativo)
+                            OUTPUT INSERTED.UsuarioID
+                            VALUES (?, ?, ?, ?, GETDATE(), 1)";
             $params = array($nome_usuario, $nome_completo, $cpf, password_hash($senha, PASSWORD_DEFAULT));
             $stmt = sqlsrv_query($conn, $sql_usuario, $params);
-            $sql_facial = "INSERT INTO DadosFaciais (UsuarioID, VetorCaracteristicas, DataCadastro) 
-              VALUES (?, ?, GETDATE())";
-            $params_facial = array($id_usuario, $resultado['vetor_caracteristicas']);
-            sqlsrv_query($conn, $sql_facial, $params_facial);
 
-            if (!$stmt) {
+            if ($stmt && sqlsrv_fetch($stmt)) {
+                $usuarioID = sqlsrv_get_field($stmt, 0);
+
+                // Inserir vetor facial
+                $sql_facial = "INSERT INTO DadosFaciais (UsuarioID, VetorCaracteristicas, DataCadastro)
+                               VALUES (?, ?, GETDATE())";
+                $params_facial = array($usuarioID, $vetor);
+                sqlsrv_query($conn, $sql_facial, $params_facial);
+
+                $mensagem = "Cadastro realizado com sucesso!";
+                $classeMensagem = 'sucesso';
+            } else {
                 throw new Exception("Erro ao cadastrar usuário no banco de dados");
             }
-
-            $mensagem = "Cadastro realizado com sucesso!";
-            $classeMensagem = 'sucesso';
 
         } catch (Exception $e) {
             $mensagem = "Erro: " . $e->getMessage();
             $classeMensagem = 'erro';
             error_log("ERRO CADASTRO: " . $e->getMessage());
         } finally {
-            // Limpar arquivo temporário
             if (isset($temp_file) && file_exists($temp_file)) {
                 @unlink($temp_file);
             }
