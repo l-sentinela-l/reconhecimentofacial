@@ -1,6 +1,6 @@
 <?php
 // Configuração do banco de dados
-$serverName = "DESKTOP-JI9FDB3\\SQLEXPRESS";
+$serverName = "DESKTOP-JI9FDB4\\SQLEXPRESS";
 $connectionOptions = array(
     "Database" => "Reconhecimento",
     "Uid" => "teste",
